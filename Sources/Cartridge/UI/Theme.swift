@@ -268,10 +268,20 @@ actor IconCache {
     }
 }
 
+/// Thread-safe in-memory image cache that views read synchronously while rendering,
+/// so a cached cover shows in the same frame its game is selected.
+final class ImageMemory: @unchecked Sendable {
+    static let shared = ImageMemory()
+    private let cache = NSCache<NSURL, NSImage>()
+    subscript(url: URL) -> NSImage? {
+        get { cache.object(forKey: url as NSURL) }
+        set { if let newValue { cache.setObject(newValue, forKey: url as NSURL) } }
+    }
+}
+
 /// Covers from LaunchBox, cached in memory and on disk in ~/Library/Caches/Cartridge.
 actor RemoteImages {
     static let shared = RemoteImages()
-    private var memory: [URL: NSImage] = [:]
     private let dir: URL = {
         let u = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("Cartridge/covers")
         try? FileManager.default.createDirectory(at: u, withIntermediateDirectories: true)
@@ -279,13 +289,13 @@ actor RemoteImages {
     }()
 
     func image(for url: URL) async -> NSImage? {
-        if let m = memory[url] { return m }
+        if let m = ImageMemory.shared[url] { return m }
         let file = dir.appendingPathComponent(url.lastPathComponent)
-        if let d = try? Data(contentsOf: file), let img = NSImage(data: d) { memory[url] = img; return img }
+        if let d = try? Data(contentsOf: file), let img = NSImage(data: d) { ImageMemory.shared[url] = img; return img }
         guard let (d, resp) = try? await URLSession.shared.data(from: url),
               (resp as? HTTPURLResponse)?.statusCode == 200, let img = NSImage(data: d) else { return nil }
         try? d.write(to: file)
-        memory[url] = img
+        ImageMemory.shared[url] = img
         return img
     }
 }
@@ -295,21 +305,34 @@ struct ArtView: View {
     var game: Game
     var meta: GameMeta?
     @State private var local: NSImage?
+    @State private var loadedKey: String?
+
+    /// The card's own image first, then LaunchBox.
+    private var sourceURL: URL? { game.artURL ?? meta?.boxArtURL }
+    private var key: String { sourceURL?.absoluteString ?? "none:\(game.id)" }
 
     var body: some View {
+        // Only trust `local` if it was loaded for the current game; otherwise use the
+        // in-memory cache synchronously. Never shows another game's cover.
+        let shown = (loadedKey == key ? local : nil) ?? sourceURL.flatMap { ImageMemory.shared[$0] }
         ZStack {
             Rectangle().fill(Palette.paper)
-            if let local {
-                Image(nsImage: local).resizable().interpolation(.none).aspectRatio(contentMode: .fit)
+            if let shown {
+                Image(nsImage: shown).resizable().interpolation(.none).aspectRatio(contentMode: .fit)
             } else { placeholder }
         }
         .clipped()
-        .task(id: "\(game.artURL?.path ?? "")|\(meta?.boxArt ?? "")") {
-            if let u = game.artURL {
-                local = await Task.detached { NSImage(contentsOf: u) }.value
-            } else if let remote = meta?.boxArtURL {
-                local = await RemoteImages.shared.image(for: remote)
-            } else { local = nil }
+        .task(id: key) {
+            guard let u = sourceURL else { local = nil; loadedKey = key; return }
+            let img: NSImage?
+            if u.isFileURL {
+                img = await Task.detached { NSImage(contentsOf: u) }.value
+                if let img { ImageMemory.shared[u] = img }
+            } else {
+                img = await RemoteImages.shared.image(for: u)
+            }
+            local = img
+            loadedKey = key
         }
     }
 

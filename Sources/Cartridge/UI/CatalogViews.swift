@@ -23,10 +23,11 @@ struct CoverView: View {
     @State private var image: NSImage?
 
     var body: some View {
+        let shown = image ?? entry.boxArtURL.flatMap { ImageMemory.shared[$0] }
         ZStack {
             Rectangle().fill(Palette.paper)
-            if let image {
-                Image(nsImage: image).resizable().aspectRatio(contentMode: .fit)
+            if let shown {
+                Image(nsImage: shown).resizable().aspectRatio(contentMode: .fit)
             } else {
                 Dither(0.22, ink: Palette.mute, pixel: 3)
                 Text(initials).font(Fonts.pixel(26)).foregroundStyle(Palette.mute).padding(6).background(Palette.paper)
