@@ -6,3 +6,8 @@ dist/
 # LaunchBox database and covers live in ~/Library, never in the repo
 Metadata.zip
 *.xml
+
+# Local notes for Claude Code
+CLAUDE.md
+CLAUDE.local.md
+.claude/
