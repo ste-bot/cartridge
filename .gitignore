@@ -1,0 +1,8 @@
+.build/
+dist/
+.swiftpm/
+*.xcodeproj/
+.DS_Store
+# LaunchBox database and covers live in ~/Library, never in the repo
+Metadata.zip
+*.xml
