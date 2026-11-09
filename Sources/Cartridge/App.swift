@@ -168,7 +168,7 @@ struct StatusOverlay: View {
             }
         }
         .padding(.bottom, 18)
-        .animation(.easeOut(duration: 0.15), value: model.activity)
+        .animation(.easeOut(duration: 0.15), value: model.activity != nil)
         .animation(.easeOut(duration: 0.15), value: model.notice)
     }
 }
