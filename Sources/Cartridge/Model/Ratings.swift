@@ -17,6 +17,10 @@ struct GameMeta: Codable, Hashable {
     var video: String?
     var boxArt: String?          // file name on images.launchbox-app.com
     var altNames: [String]?
+    var releaseType: String?     // Released, Unlicensed, Homebrew, ROM Hack, Unreleased…
+
+    /// Shown in the catalog: games that came out commercially (licensed or not).
+    var isCatalogRelease: Bool { releaseType == nil || releaseType == "Released" || releaseType == "Unlicensed" }
 
     var boxArtURL: URL? { boxArt.flatMap { URL(string: "https://images.launchbox-app.com/\($0)") } }
     var launchBoxURL: URL? { URL(string: "https://gamesdb.launchbox-app.com/games/details/\(id)") }
@@ -62,7 +66,8 @@ final class RatingsIndex: @unchecked Sendable {
     private var exact: [String: [String: Int]] = [:]    // platform -> key -> entry index
     private var loose: [String: [String: Int]] = [:]
 
-    struct File: Codable { var built: Date; var entries: [GameMeta] }
+    struct File: Codable { var version: Int?; var built: Date; var entries: [GameMeta] }
+    static let formatVersion = 2
 
     init(file: File) {
         built = file.built
@@ -89,6 +94,18 @@ final class RatingsIndex: @unchecked Sendable {
         return nil
     }
 
+    private var catalogCache: [String: [GameMeta]] = [:]
+
+    /// Every commercially released game for these platforms (no homebrew, hacks, unreleased or DLC).
+    func catalog(platforms: [String]) -> [GameMeta] {
+        let key = platforms.sorted().joined(separator: "|")
+        if let c = catalogCache[key] { return c }
+        let set = Set(platforms)
+        let list = entries.filter { set.contains($0.platform) && $0.isCatalogRelease }
+        catalogCache[key] = list
+        return list
+    }
+
     static var directory: URL {
         let u = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Cartridge")
         try? FileManager.default.createDirectory(at: u, withIntermediateDirectories: true)
@@ -101,7 +118,7 @@ final class RatingsIndex: @unchecked Sendable {
     static func load() -> RatingsIndex? {
         guard let d = try? Data(contentsOf: indexURL) else { return nil }
         let dec = JSONDecoder(); dec.dateDecodingStrategy = .iso8601
-        guard let f = try? dec.decode(File.self, from: d) else { return nil }
+        guard let f = try? dec.decode(File.self, from: d), f.version == formatVersion else { return nil }
         return RatingsIndex(file: f)
     }
 
@@ -115,7 +132,7 @@ final class RatingsIndex: @unchecked Sendable {
         progress("Reading 500 MB of game data…")
         let parser = LaunchBoxParser(platforms: platforms)
         let entries = try await Task.detached(priority: .userInitiated) { try parser.parse(tmp.appendingPathComponent("Metadata.xml")) }.value
-        let file = File(built: Date(), entries: entries)
+        let file = File(version: formatVersion, built: Date(), entries: entries)
         let enc = JSONEncoder(); enc.dateEncodingStrategy = .iso8601
         try enc.encode(file).write(to: indexURL)
         progress("Indexed \(entries.count.formatted()) games")
@@ -173,7 +190,8 @@ final class LaunchBoxParser: NSObject, XMLParserDelegate, @unchecked Sendable {
                                    genres: fields["Genres"].flatMap { $0.isEmpty ? nil : $0 },
                                    developer: fields["Developer"], publisher: fields["Publisher"],
                                    players: fields["MaxPlayers"].flatMap(Int.init), overview: ov,
-                                   wikipedia: fields["WikipediaURL"], video: fields["VideoURL"])
+                                   wikipedia: fields["WikipediaURL"], video: fields["VideoURL"],
+                                   releaseType: fields["ReleaseType"])
         case "GameAlternateName":
             if let a = fields["AlternateName"] { alts[id, default: []].append(a) }
         case "GameImage":

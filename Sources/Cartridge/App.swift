@@ -54,6 +54,7 @@ struct RootView: View {
         .onChange(of: model.section) { _, _ in
             // Genres and gaps differ per system, so a filter from one view would silently empty the next.
             model.genre = nil
+            model.selectedCatalog = nil
             model.noCoverOnly = false
         }
     }

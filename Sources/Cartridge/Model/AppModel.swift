@@ -21,7 +21,7 @@ struct Activity: Equatable {
 
 @MainActor @Observable
 final class AppModel {
-    var snapshot: CardSnapshot?
+    var snapshot: CardSnapshot? { didSet { ownedCache = nil } }
     var loading = false
     var section: Pane = .library(.all)
     var search = ""
@@ -29,6 +29,9 @@ final class AppModel {
     var genre: String?            // nil = any
     var ratedOnly = false
     var noCoverOnly = false
+    var libraryMode: LibraryMode = .mine
+    var availability: Availability = .all
+    var selectedCatalog: Int?     // LaunchBox id
     var selectedGame: Game.ID?
     var activity: Activity?
     var notice: String?
@@ -38,7 +41,10 @@ final class AppModel {
     var releases: [OnionRelease] = []
     var releaseError: String?
 
-    @ObservationIgnored private var metaCache: [String: GameMeta?] = [:]
+    @ObservationIgnored private var metaCache: [String: GameMeta?] = [:] {
+        didSet { if metaCache.isEmpty { ownedCache = nil } }
+    }
+    @ObservationIgnored var ownedCache: [Int: Game]?
 
     init() {
         // Launch arguments for opening a specific screen, e.g. `-pane device` or `-pane system:GBA -select "GBA/Pokemon Emerald.gba"`.
@@ -52,6 +58,9 @@ final class AppModel {
         }
         selectedGame = d.string(forKey: "select")
         noCoverOnly = d.bool(forKey: "nocover")
+        if d.string(forKey: "mode") == "catalog" { libraryMode = .catalog }
+        if let a = d.string(forKey: "availability"), let v = Availability(rawValue: a) { availability = v }
+        if d.integer(forKey: "catalogSelect") != 0 { selectedCatalog = d.integer(forKey: "catalogSelect") }
         Task { await loadRatings() }
         Task { await refresh() }
         Task { await loadReleases() }

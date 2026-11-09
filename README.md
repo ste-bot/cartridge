@@ -20,6 +20,16 @@ Every game on the card, with box art and details from the [LaunchBox Games Datab
 
 ![Game details: rating, genre, developer and description](docs/detail.png)
 
+### Full catalog
+Switch any system (or All games) from **On card** to **Full catalog** to see every game released for it, not just the ones you have.
+
+- The header shows your coverage, for example **156 of 1,712 released games on card**.
+- Each game is marked **On card** or not. Filter to **Not on card** and sort by rating for a ranked list of what's missing.
+- **Add from file…** puts a ROM you already own on the card, such as a dump of your own cartridge. Cartridge saves it under the catalog name so its cover and details match. Cartridge never downloads games.
+- Unreleased games, homebrew, ROM hacks and DLC are hidden.
+
+![Full catalog: Game Boy Advance games not on the card, ranked by rating](docs/catalog.png)
+
 ### Device
 - Free space at a glance, plus your Onion and RetroArch versions.
 - The latest Onion release from GitHub. **Copy update to card** puts it on the card; the Miyoo installs it the next time it starts.
