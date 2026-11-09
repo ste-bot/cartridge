@@ -138,6 +138,7 @@ struct NoCardView: View {
 
 struct StatusOverlay: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: 8) {
@@ -152,6 +153,7 @@ struct StatusOverlay: View {
                 .padding(.horizontal, 14).padding(.vertical, 10)
                 .background(Palette.panel)
                 .overlay(Rectangle().strokeBorder(Palette.ink, lineWidth: 1))
+                .transition(Motion.toast(reduceMotion: reduceMotion))
             }
             if let n = model.notice {
                 HStack(spacing: 10) {
@@ -161,6 +163,8 @@ struct StatusOverlay: View {
                 }
                 .padding(.horizontal, 14).padding(.vertical, 10)
                 .background(Palette.ink)
+                .transition(Motion.toast(reduceMotion: reduceMotion))
+                .id(n)
                 .task(id: n) {
                     try? await Task.sleep(for: .seconds(5))
                     if model.notice == n { model.notice = nil }
@@ -168,7 +172,7 @@ struct StatusOverlay: View {
             }
         }
         .padding(.bottom, 18)
-        .animation(.easeOut(duration: 0.15), value: model.activity != nil)
-        .animation(.easeOut(duration: 0.15), value: model.notice)
+        .animation(Motion.reflow, value: model.activity != nil)
+        .animation(Motion.reflow, value: model.notice)
     }
 }
