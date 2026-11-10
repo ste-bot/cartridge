@@ -164,6 +164,8 @@ struct CartridgeGlyph: View {
 /// The SD card itself, filled from the bottom by a dither that thickens with how full it is.
 struct SDCardGraphic: View {
     var used: Double
+    /// How many of the five contacts are lit; the boot and eject moments step through these.
+    var lit = 5
 
     var body: some View {
         GeometryReader { g in
@@ -182,7 +184,7 @@ struct SDCardGraphic: View {
                 }
                 .clipShape(outline)
                 HStack(spacing: w * 0.05) {
-                    ForEach(0..<5, id: \.self) { _ in Rectangle().fill(Palette.lcd).frame(width: w * 0.09, height: h * 0.16) }
+                    ForEach(0..<5, id: \.self) { i in Rectangle().fill(i < lit ? Palette.lcd : Palette.rule).frame(width: w * 0.09, height: h * 0.16) }
                 }
                 .frame(maxHeight: .infinity, alignment: .top)
                 .padding(.top, h * 0.06)

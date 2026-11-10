@@ -6,6 +6,8 @@ struct LibraryView: View {
     var scope: LibraryScope
     @State private var dropping = false
     @State private var importing = false
+    @State private var completeFlash = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var title: String {
         switch scope {
@@ -121,7 +123,16 @@ struct LibraryView: View {
                     HStack(spacing: 10) {
                         Text("\(c.have.formatted()) of \(c.total.formatted()) released games on card")
                             .font(Fonts.mono(12)).foregroundStyle(Palette.mute)
-                        SegmentMeter(value: Double(c.have) / Double(max(1, c.total)), segments: 20, height: 6).frame(width: 160)
+                        SegmentMeter(value: Double(c.have) / Double(max(1, c.total)), segments: 20,
+                                     color: completeFlash ? Palette.button : Palette.ink, height: 6).frame(width: 160)
+                    }
+                    .onChange(of: "\(title)|\(c.have)|\(c.total)") { old, new in
+                        let o = old.split(separator: "|"), n = new.split(separator: "|")
+                        guard o.count == 3, n.count == 3, o[0] == n[0], let was = Int(o[1]), let now = Int(n[1]),
+                              let total = Int(n[2]), total > 0, now == total, was < total else { return }
+                        model.announce("Every released \(title) game is on your card", lcd: true)
+                        guard !reduceMotion else { return }
+                        Task { for i in 0..<6 { completeFlash = i % 2 == 0; try? await Task.sleep(for: .milliseconds(110)) }; completeFlash = false }
                     }
                 } else {
                     Text("\(count.formatted()) games · \(bytes.bytes)").font(Fonts.mono(12)).foregroundStyle(Palette.mute)
@@ -134,6 +145,7 @@ struct LibraryView: View {
         VStack(alignment: .leading, spacing: 10) {
             switch scope {
             case .favorites:
+                PixelStar().padding(.bottom, 6)
                 Text("No favorites yet").font(Fonts.pixel(20))
                 Text("Select a game and choose Add to Favorites. It shows up in the Favorites tab on the Miyoo too.")
             default:

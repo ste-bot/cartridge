@@ -36,6 +36,8 @@ struct CartridgeApp: App {
 
 struct RootView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var booting: CardSnapshot?
 
     var body: some View {
         @Bindable var model = model
@@ -56,9 +58,19 @@ struct RootView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Palette.paper)
+            .overlay {
+                // Covers only the main area, so the sidebar fills in with the card's systems underneath.
+                if let b = booting {
+                    BootSplash(snapshot: b) { booting = nil }
+                        .transition(.opacity.animation(Motion.toastOut))
+                }
+            }
         }
         .overlay(alignment: .bottom) { StatusOverlay() }
         .tint(Palette.button)
+        .onChange(of: model.snapshot == nil) { wasNil, isNil in
+            if wasNil && !isNil && !reduceMotion { booting = model.snapshot }
+        }
         .onChange(of: model.section) { _, _ in
             // Genres and gaps differ per system, so a filter from one view would silently empty the next.
             model.genre = nil
@@ -143,8 +155,12 @@ struct NoCardView: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
+        if let e = model.ejected { EjectedView(ejected: e) } else { waiting }
+    }
+
+    var waiting: some View {
         VStack(spacing: 18) {
-            SDCardGraphic(used: 0).frame(width: 90)
+            SDCardGraphic(used: 0, lit: 0).frame(width: 90)
             Text("Insert the Miyoo's microSD card").font(Fonts.pixel(22)).foregroundStyle(Palette.ink)
             Text("Cartridge reads Onion cards straight from the card reader. It opens automatically once the card mounts.")
                 .font(Fonts.body(13)).foregroundStyle(Palette.mute).multilineTextAlignment(.center).frame(maxWidth: 360)
@@ -174,13 +190,15 @@ struct StatusOverlay: View {
                 .transition(Motion.toast(reduceMotion: reduceMotion))
             }
             if let n = model.notice {
+                let lcd = model.noticeIsLCD
                 HStack(spacing: 10) {
-                    Text(n).font(Fonts.medium(12)).foregroundStyle(Palette.paper)
-                    Button { model.notice = nil } label: { Image(systemName: "xmark").foregroundStyle(Palette.paper) }
+                    Text(n).font(lcd ? Fonts.pixel(13) : Fonts.medium(12)).foregroundStyle(lcd ? Palette.lcdInk : Palette.paper)
+                    Button { model.notice = nil } label: { Image(systemName: "xmark").foregroundStyle(lcd ? Palette.lcdInk : Palette.paper) }
                         .buttonStyle(.plain).accessibilityLabel("Dismiss")
                 }
                 .padding(.horizontal, 14).padding(.vertical, 10)
-                .background(Palette.ink)
+                .background(lcd ? Palette.lcd : Palette.ink)
+                .overlay { if lcd { Rectangle().strokeBorder(Palette.lcdInk.opacity(0.5), lineWidth: 1).padding(3) } }
                 .transition(Motion.toast(reduceMotion: reduceMotion))
                 .id(n)
                 .task(id: n) {

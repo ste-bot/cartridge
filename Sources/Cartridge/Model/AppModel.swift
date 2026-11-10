@@ -34,7 +34,14 @@ final class AppModel {
     var selectedCatalog: Int?     // LaunchBox id
     var selectedGame: Game.ID?
     var activity: Activity?
-    var notice: String?
+    var notice: String? { didSet { noticeIsLCD = false } }
+    /// Messages about the device itself (eject, update, a completed system) render as the Miyoo's LCD.
+    var noticeIsLCD = false
+    func announce(_ text: String, lcd: Bool = false) { notice = text; noticeIsLCD = lcd }
+
+    /// Set by a successful eject so the no-card screen can play it out; cleared when a card mounts.
+    struct Ejected: Equatable { var name: String; var used: Double }
+    var ejected: Ejected?
 
     var ratings: RatingsIndex?
     var ratingsStatus = "Not installed"
@@ -61,6 +68,12 @@ final class AppModel {
         if d.string(forKey: "mode") == "catalog" { libraryMode = .catalog }
         if let a = d.string(forKey: "availability"), let v = Availability(rawValue: a) { availability = v }
         if d.integer(forKey: "catalogSelect") != 0 { selectedCatalog = d.integer(forKey: "catalogSelect") }
+        // `-preview ejected|lcd` stages a delight moment for screenshots without touching a real card.
+        switch d.string(forKey: "preview") {
+        case "ejected": ejected = Ejected(name: "MIYOO MINI", used: 0.62)
+        case "lcd": announce("Onion 4.3.1-1 is on the card. Eject, then turn the Miyoo on to install.", lcd: true)
+        default: break
+        }
         Task { await loadRatings() }
         Task { await refresh() }
         Task { await loadReleases() }
@@ -78,6 +91,7 @@ final class AppModel {
         guard let root = CardReader.findCards().first else { snapshot = nil; return }
         loading = true
         let snap = await Task.detached(priority: .userInitiated) { CardReader.read(root) }.value
+        ejected = nil
         snapshot = snap
         metaCache = [:]
         loading = false
@@ -330,7 +344,7 @@ final class AppModel {
         activity = Activity(title: "Onion \(r.version)", detail: "Starting…")
         do {
             try await OnionUpdates.stage(r, onto: s.root) { msg in Task { @MainActor in self.activity?.detail = msg } }
-            notice = "Onion \(r.version) is on the card. Eject, then turn the Miyoo on to install."
+            announce("Onion \(r.version) is on the card. Eject, then turn the Miyoo on to install.", lcd: true)
         } catch { notice = "Update failed: \(error.localizedDescription)" }
         activity = nil
         await refresh()
@@ -360,8 +374,8 @@ final class AppModel {
         guard let s = snapshot else { return }
         do {
             try NSWorkspace.shared.unmountAndEjectDevice(at: s.root)
+            ejected = Ejected(name: s.volumeName, used: Double(s.usedBytes) / Double(max(1, s.totalBytes)))
             snapshot = nil
-            notice = "Ejected. It's safe to remove the card."
         } catch { notice = "Couldn't eject: \(error.localizedDescription)" }
     }
 
