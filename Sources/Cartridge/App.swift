@@ -145,6 +145,7 @@ struct Sidebar: View {
 }
 
 /// A soft wash behind the row under the pointer, sized to sit where the system selection highlight draws.
+/// Fill and corner match the toolbar's sidebar toggle hover, so the two read as one control family.
 /// No fade: the sidebar is scanned dozens of times a day, so the state follows the pointer instantly.
 struct SidebarRow<Content: View>: View {
     var selected: Bool
@@ -156,8 +157,8 @@ struct SidebarRow<Content: View>: View {
             .contentShape(Rectangle())
             .background {
                 if hovering && !selected {
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        .fill(Palette.ink.opacity(0.07))
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(Palette.ink.opacity(0.03))
                         .padding(.horizontal, -8).padding(.vertical, -4)
                 }
             }
