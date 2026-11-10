@@ -135,6 +135,7 @@ struct PackageRow: View {
             Spacer()
             if installed {
                 Button("Remove") { confirmRemove = true }.buttonStyle(.borderless).font(Fonts.body(11)).foregroundStyle(Palette.mute)
+                    .frame(width: CTASize.compactWidth)
             } else {
                 Button("Install") { Task { await model.install(package) } }.buttonStyle(PixelButtonStyle())
             }

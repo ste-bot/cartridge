@@ -218,6 +218,7 @@ struct FilterBar: View {
             }
             Spacer(minLength: 8)
             Text("\(shown.formatted()) shown").font(Fonts.mono(11)).foregroundStyle(Palette.mute)
+                .lineLimit(1).layoutPriority(-1)
         }
         .padding(.vertical, 8)
         .overlay(Rectangle().fill(Palette.rule).frame(height: 1), alignment: .top)
@@ -229,7 +230,9 @@ struct FilterBar: View {
             Text(text).font(Fonts.medium(12)).lineLimit(1)
             if menu { Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold)) }
         }
-        .padding(.horizontal, 10).padding(.vertical, 5)
+        .padding(.horizontal, Control.inset)
+        .frame(height: Control.height)
+        .fixedSize()
         .foregroundStyle(on ? Palette.paper : Palette.ink)
         .background(on ? Palette.ink : Color.clear)
         .overlay(Rectangle().strokeBorder(on ? Palette.ink : Palette.rule, lineWidth: 1))
@@ -262,8 +265,7 @@ struct CoverBanner: View {
                 Button("Save \(gaps.fillable.count) cover\(gaps.fillable.count == 1 ? "" : "s") to card") {
                     Task { await model.saveCovers(scope: scope) }
                 }
-                .buttonStyle(PixelButtonStyle(prominent: true))
-                .fixedSize()
+                .buttonStyle(PixelButtonStyle(prominent: true, size: .wide))
                 .disabled(model.activity != nil)
             }
         }
@@ -345,9 +347,9 @@ struct GameDetail: View {
                 RatingView(meta: meta)
                 HStack(spacing: 8) {
                     Button(model.isFavorite(game) ? "In Favorites" : "Add to Favorites") { model.toggleFavorite(game) }
-                        .buttonStyle(PixelButtonStyle(prominent: !model.isFavorite(game)))
+                        .buttonStyle(PixelButtonStyle(prominent: !model.isFavorite(game), size: .fill))
                     Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([game.url]) }
-                        .buttonStyle(PixelButtonStyle())
+                        .buttonStyle(PixelButtonStyle(size: .fill))
                 }
                 if let meta {
                     VStack(alignment: .leading, spacing: 6) {
@@ -368,7 +370,7 @@ struct GameDetail: View {
                     .font(Fonts.body(12))
                     if game.artURL == nil, meta.boxArtURL != nil {
                         Button("Save this cover to the card") { Task { await model.saveBoxArt(for: game) } }
-                            .buttonStyle(PixelButtonStyle())
+                            .buttonStyle(PixelButtonStyle(size: .fill))
                     }
                 } else {
                     Text(model.ratings == nil
@@ -415,7 +417,8 @@ struct ModeSwitch: View {
         let on = mode == value
         return Button { mode = value } label: {
             Text(title).font(Fonts.medium(12)).lineLimit(1)
-                .padding(.horizontal, 12).padding(.vertical, 5)
+                .padding(.horizontal, Control.inset)
+                .frame(height: Control.height)
                 .foregroundStyle(on ? Palette.paper : Palette.ink)
                 .background(on ? Palette.ink : Color.clear)
                 .contentShape(Rectangle())

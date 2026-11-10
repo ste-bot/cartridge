@@ -117,7 +117,7 @@ struct CatalogDetail: View {
                             model.selectedCatalog = nil
                             model.selectedGame = game.id
                         }
-                        .buttonStyle(PixelButtonStyle())
+                        .buttonStyle(PixelButtonStyle(size: .fill))
                     }
                     .padding(12).frame(maxWidth: .infinity, alignment: .leading)
                     .overlay(Rectangle().strokeBorder(Palette.ink, lineWidth: 1))
@@ -128,7 +128,7 @@ struct CatalogDetail: View {
                              + "Roms/\(folder ?? "?") as “\(AppModel.safeFileName(entry.name))” so its cover and details match.")
                             .font(Fonts.body(12)).foregroundStyle(Palette.mute).fixedSize(horizontal: false, vertical: true)
                         Button("Add from file…") { model.addFromFile(for: entry, scope: scope) }
-                            .buttonStyle(PixelButtonStyle(prominent: true))
+                            .buttonStyle(PixelButtonStyle(prominent: true, size: .fill))
                             .disabled(model.activity != nil || folder == nil)
                     }
                     .padding(12).frame(maxWidth: .infinity, alignment: .leading)

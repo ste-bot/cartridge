@@ -205,12 +205,38 @@ struct Eyebrow: View {
     }
 }
 
+/// Control atoms. Every interactive control (CTA, filter chip, mode switch) is one height,
+/// and CTAs take one of a few fixed widths.
+enum Control {
+    static let height: CGFloat = 28
+    static let inset: CGFloat = 12
+}
+
+/// Button widths come from the slot a button sits in, never from its label, so neighbouring
+/// buttons line up and a label change (Download → Update, Save 9 → Save 12) never moves anything.
+enum CTASize {
+    /// Trailing row actions: Card care, Install, Try again.
+    case compact
+    /// A primary action that stands alone in a row: Copy update to card, Save covers to card.
+    case wide
+    /// Fills its container; paired buttons split the width evenly. Used in the inspector.
+    case fill
+
+    static let compactWidth: CGFloat = 96
+    static let wideWidth: CGFloat = 184
+}
+
 struct PixelButtonStyle: ButtonStyle {
     var prominent = false
+    var size: CTASize = .compact
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(Fonts.medium(12))
-            .padding(.horizontal, 12).padding(.vertical, 6)
+            .lineLimit(1).minimumScaleFactor(0.85)
+            .padding(.horizontal, Control.inset)
+            .frame(height: Control.height)
+            .frame(width: size == .compact ? CTASize.compactWidth : size == .wide ? CTASize.wideWidth : nil)
+            .frame(maxWidth: size == .fill ? .infinity : nil)
             .foregroundStyle(prominent ? Palette.paper : Palette.ink)
             .background(prominent ? Palette.button : Palette.panel)
             .overlay(Rectangle().strokeBorder(prominent ? Palette.button : Palette.ink, lineWidth: 1))

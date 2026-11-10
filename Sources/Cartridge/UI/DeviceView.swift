@@ -71,7 +71,7 @@ struct DeviceView: View {
                             Text("Copied, waiting for boot").font(Fonts.mono(11)).foregroundStyle(Palette.mute)
                         } else if newer || !known {
                             Button("Copy update to card") { Task { await model.stageUpdate(r) } }
-                                .buttonStyle(PixelButtonStyle(prominent: true))
+                                .buttonStyle(PixelButtonStyle(prominent: true, size: .wide))
                                 .disabled(model.activity != nil)
                         } else {
                             Text("Up to date").font(Fonts.mono(11)).foregroundStyle(Palette.mute)
