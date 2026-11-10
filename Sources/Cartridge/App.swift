@@ -92,7 +92,9 @@ struct Sidebar: View {
 
     var body: some View {
         @Bindable var model = model
-        List(selection: Binding(get: { model.section }, set: { if let v = $0 { model.section = v } })) {
+        // No List selection: the system draws it in the user's accent (usually blue), which fights the palette.
+        // Rows select themselves on click and draw their own highlight.
+        List {
             Section {
                 row("Device", glyph: navIcon("sdcard", .device), pane: .device)
                 row("Emulators", glyph: navIcon("cpu", .emulators), pane: .emulators)
@@ -119,7 +121,7 @@ struct Sidebar: View {
     /// Every sidebar row shares one geometry: icons left-aligned in a 22pt column, labels on one text column,
     /// counts on the trailing edge.
     func row(_ title: String, count: Int? = nil, glyph: AnyView, pane: Pane) -> some View {
-        SidebarRow(selected: model.section == pane) {
+        SidebarRow(selected: model.section == pane, select: { model.section = pane }) {
             HStack(spacing: 8) {
                 glyph.frame(width: 22, alignment: .leading)
                 Text(title)
@@ -127,12 +129,11 @@ struct Sidebar: View {
                 if let count { Text("\(count)").font(Fonts.mono(11)).foregroundStyle(.secondary) }
             }
         }
-        .tag(pane)
     }
 
-    /// Accent-tinted, except on the selected row where the system's selected style keeps it legible on the highlight.
+    /// Accent-tinted; the custom highlight is light enough to keep it legible when selected.
     func navIcon(_ symbol: String, _ pane: Pane) -> AnyView {
-        model.section == pane ? AnyView(Image(systemName: symbol)) : AnyView(Image(systemName: symbol).foregroundStyle(Palette.button))
+        AnyView(Image(systemName: symbol).foregroundStyle(Palette.button))
     }
 
     /// Section headers start on the icons' left edge (the system inset is 2pt shy of the row content).
@@ -148,24 +149,31 @@ struct Sidebar: View {
     }
 }
 
-/// A soft wash behind the row under the pointer, sized to sit where the system selection highlight draws.
-/// No fade: the sidebar is scanned dozens of times a day, so the state follows the pointer instantly.
+/// One sidebar row. Selected rows get a wash of the accent magenta instead of the system's blue;
+/// the row under the pointer gets a neutral wash. No fade: the sidebar is scanned dozens of times a day,
+/// so both states follow the pointer instantly.
 struct SidebarRow<Content: View>: View {
     var selected: Bool
+    var select: () -> Void
     @ViewBuilder var content: Content
     @State private var hovering = false
 
     var body: some View {
         content
+            .foregroundStyle(Palette.ink)
             .contentShape(Rectangle())
             .background {
-                if hovering && !selected {
+                if selected || hovering {
                     RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        .fill(Palette.ink.opacity(0.07))
+                        .fill(selected ? Palette.button.opacity(0.2) : Palette.ink.opacity(0.07))
                         .padding(.horizontal, -8).padding(.vertical, -4)
                 }
             }
             .onHover { hovering = $0 }
+            .onTapGesture(perform: select)
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
+            .accessibilityAction { select() }
     }
 }
 
