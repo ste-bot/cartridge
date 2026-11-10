@@ -39,12 +39,16 @@ struct RootView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var booting: CardSnapshot?
+    @State private var columns: NavigationSplitViewVisibility = .all
 
     var body: some View {
         @Bindable var model = model
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columns) {
             Sidebar()
                 .navigationSplitViewColumnWidth(min: 210, ideal: 230, max: 280)
+                // The system toggle's hover fades in slowly; ours reacts as fast as the sidebar rows.
+                .toolbar(removing: .sidebarToggle)
+                .toolbar { SidebarToggle(columns: $columns) }
         } detail: {
             Group {
                 if model.snapshot == nil {
@@ -145,7 +149,6 @@ struct Sidebar: View {
 }
 
 /// A soft wash behind the row under the pointer, sized to sit where the system selection highlight draws.
-/// Fill and corner match the toolbar's sidebar toggle hover, so the two read as one control family.
 /// No fade: the sidebar is scanned dozens of times a day, so the state follows the pointer instantly.
 struct SidebarRow<Content: View>: View {
     var selected: Bool
@@ -157,12 +160,61 @@ struct SidebarRow<Content: View>: View {
             .contentShape(Rectangle())
             .background {
                 if hovering && !selected {
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(Palette.ink.opacity(0.03))
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .fill(Palette.ink.opacity(0.07))
                         .padding(.horizontal, -8).padding(.vertical, -4)
                 }
             }
             .onHover { hovering = $0 }
+    }
+}
+
+struct SidebarToggle: ToolbarContent {
+    @Binding var columns: NavigationSplitViewVisibility
+
+    var body: some ToolbarContent {
+        if #available(macOS 26, *) {
+            item.sharedBackgroundVisibility(.hidden)
+        } else {
+            item
+        }
+    }
+
+    var item: some ToolbarContent {
+        ToolbarItem(placement: .automatic) {
+            Button {
+                withAnimation { columns = columns == .detailOnly ? .all : .detailOnly }
+            } label: {
+                Image(systemName: "sidebar.left")
+            }
+            .buttonStyle(ToolbarIconStyle())
+            .help("Hide or show the sidebar")
+            .accessibilityLabel("Toggle sidebar")
+        }
+    }
+}
+
+/// Same wash and timing as `SidebarRow`: on the instant the pointer arrives, gone the instant it leaves.
+struct ToolbarIconStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View { ToolbarIcon(configuration: configuration) }
+
+    private struct ToolbarIcon: View {
+        let configuration: ButtonStyle.Configuration
+        @State private var hovering = false
+        var body: some View {
+            configuration.label
+                .font(.system(size: 15))
+                .foregroundStyle(.secondary)
+                .frame(width: 32, height: 28)
+                .background {
+                    if hovering || configuration.isPressed {
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            .fill(Palette.ink.opacity(configuration.isPressed ? 0.14 : 0.07))
+                    }
+                }
+                .contentShape(Rectangle())
+                .onHover { hovering = $0 }
+        }
     }
 }
 
