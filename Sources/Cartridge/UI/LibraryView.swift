@@ -99,7 +99,7 @@ struct LibraryView: View {
                     GameDetail(game: g)
                 }
             }
-            .inspectorColumnWidth(min: 300, ideal: 340, max: 420)
+            .inspectorColumnWidth(min: Inspector.minWidth, ideal: Inspector.idealWidth, max: Inspector.maxWidth)
         }
     }
 
@@ -226,7 +226,7 @@ struct FilterBar: View {
             }
 
             if model.filtersActive || (catalog && model.availability != .all) {
-                Button("Clear") { model.clearFilters(); model.availability = .all }.buttonStyle(.borderless).font(Fonts.body(12))
+                Button("Clear") { model.clearFilters(); model.availability = .all }.buttonStyle(PixelLinkStyle(color: Palette.ink)).font(Fonts.body(12))
             }
             Spacer(minLength: 8)
             Text("\(shown.formatted()) shown").font(Fonts.mono(11)).foregroundStyle(Palette.mute)
@@ -340,7 +340,7 @@ struct GameDetail: View {
     var body: some View {
         let meta = model.meta(for: game)
         let info = SystemCatalog.info(for: game.system)
-        ScrollView {
+        InspectorScroll {
             VStack(alignment: .leading, spacing: 18) {
                 ArtView(game: game, meta: meta)
                     .frame(maxWidth: .infinity).frame(height: 260)
@@ -379,7 +379,7 @@ struct GameDetail: View {
                         if let w = meta.wikipedia, let u = URL(string: w) { Link("Wikipedia", destination: u) }
                         if let v = meta.video, let u = URL(string: v) { Link("Video", destination: u) }
                     }
-                    .font(Fonts.body(12))
+                    .font(Fonts.body(12)).buttonStyle(PixelLinkStyle())
                     if game.artURL == nil, meta.boxArtURL != nil {
                         Button("Save this cover to the card") { Task { await model.saveBoxArt(for: game) } }
                             .buttonStyle(PixelButtonStyle(size: .fill))
@@ -396,11 +396,9 @@ struct GameDetail: View {
                     LabeledRow(label: "Folder", value: "Roms/" + (game.relPath as NSString).deletingLastPathComponent)
                 }
                 Button("Delete from card…") { confirmDelete = true }
-                    .buttonStyle(.borderless).foregroundStyle(Palette.warn).font(Fonts.body(12))
+                    .buttonStyle(PixelLinkStyle(color: Palette.warn)).font(Fonts.body(12))
             }
-            .padding(.horizontal, 20).padding(.top, -16).padding(.bottom, 20)
         }
-        .background(Palette.paper)
         .confirmationDialog("Delete \(game.title)?", isPresented: $confirmDelete) {
             Button("Delete \(game.size.bytes)", role: .destructive) { model.delete(game) }
         } message: {

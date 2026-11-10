@@ -82,7 +82,7 @@ struct DeviceView: View {
                             Text("Beta build" + (b.published_at.map { " · " + $0.formatted(date: .abbreviated, time: .omitted) } ?? ""))
                                 .font(Fonts.body(12)).foregroundStyle(Palette.mute)
                             Spacer()
-                            Link("Release notes", destination: b.html_url).font(Fonts.body(12))
+                            Link("Release notes", destination: b.html_url).font(Fonts.body(12)).buttonStyle(PixelLinkStyle())
                         }
                     }
                 } else if let e = model.releaseError {

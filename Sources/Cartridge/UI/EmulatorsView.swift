@@ -134,7 +134,7 @@ struct PackageRow: View {
             if package.kind == "RApp" { Text("EXPERT").font(Fonts.mono(9)).foregroundStyle(Palette.mute) }
             Spacer()
             if installed {
-                Button("Remove") { confirmRemove = true }.buttonStyle(.borderless).font(Fonts.body(11)).foregroundStyle(Palette.mute)
+                Button("Remove") { confirmRemove = true }.buttonStyle(PixelLinkStyle(color: Palette.mute)).font(Fonts.body(11))
                     .frame(width: CTASize.compactWidth)
             } else {
                 Button("Install") { Task { await model.install(package) } }.buttonStyle(PixelButtonStyle())

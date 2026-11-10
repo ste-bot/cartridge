@@ -232,6 +232,71 @@ struct PixelButtonStyle: ButtonStyle {
     var prominent = false
     var size: CTASize = .compact
     func makeBody(configuration: Configuration) -> some View {
+        PixelButton(configuration: configuration, prominent: prominent, size: size)
+    }
+}
+
+/// Text links and text-only actions (Delete from card…, Wikipedia, Clear). A faint 1px underline marks them
+/// as clickable at rest; under the pointer it goes solid and the cursor becomes a hand. Pressing dims the text.
+struct PixelLinkStyle: ButtonStyle {
+    var color: Color = Palette.button
+    func makeBody(configuration: Configuration) -> some View {
+        PixelLink(configuration: configuration, color: color)
+    }
+}
+
+private struct PixelLink: View {
+    let configuration: ButtonStyleConfiguration
+    let color: Color
+    @State private var hovering = false
+    @Environment(\.isEnabled) private var isEnabled
+
+    var body: some View {
+        let lit = hovering && isEnabled
+        configuration.label
+            .foregroundStyle(color)
+            .padding(.bottom, 2)
+            .overlay(alignment: .bottom) {
+                Rectangle().fill(color).frame(height: 1).opacity(lit ? 1 : 0.3)
+            }
+            .opacity(!isEnabled ? 0.45 : configuration.isPressed ? 0.6 : 1)
+            .contentShape(Rectangle())
+            .onHover { hovering = $0 }
+            .pointerStyle(isEnabled ? .link : nil)
+            .animation(Motion.easeOut(0.12), value: lit)
+    }
+}
+
+/// A physical key: the face sits on a hard shadow that is its depth.
+/// Hover lifts the face 1pt off the shadow and tints it; pressing pushes it flush with the shadow
+/// and tints it further, so rest, hover and press each read at a glance.
+/// Press lands instantly and only the release animates, so the click never feels late.
+/// With Reduce Motion the face doesn't move; the tints alone carry hover and press.
+private struct PixelButton: View {
+    let configuration: ButtonStyleConfiguration
+    let prominent: Bool
+    let size: CTASize
+    @State private var hovering = false
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var pressed: Bool { configuration.isPressed && isEnabled }
+    private var lifted: Bool { hovering && isEnabled && !pressed }
+
+    /// Shadow depth below the face, and how far the face moves toward it.
+    private static let depth: CGFloat = 2
+    private var faceOffset: CGFloat {
+        if reduceMotion { return 0 }
+        return pressed ? Self.depth : lifted ? -1 : 0
+    }
+
+    /// Light faces darken under the pointer; the filled accent face lightens.
+    private var tint: Color {
+        if prominent { return pressed ? .black.opacity(0.18) : lifted ? .white.opacity(0.14) : .clear }
+        return Palette.ink.opacity(pressed ? 0.16 : lifted ? 0.08 : 0)
+    }
+
+    var body: some View {
         configuration.label
             .font(Fonts.medium(12))
             .lineLimit(1).minimumScaleFactor(0.85)
@@ -240,11 +305,48 @@ struct PixelButtonStyle: ButtonStyle {
             .frame(width: size == .compact ? CTASize.compactWidth : size == .wide ? CTASize.wideWidth : nil)
             .frame(maxWidth: size == .fill ? .infinity : nil)
             .foregroundStyle(prominent ? Palette.paper : Palette.ink)
+            .background(tint)
             .background(prominent ? Palette.button : Palette.panel)
             .overlay(Rectangle().strokeBorder(prominent ? Palette.button : Palette.ink, lineWidth: 1))
-            .offset(y: configuration.isPressed ? 1 : 0)
-            .background(Rectangle().fill(Palette.ink.opacity(prominent ? 0.35 : 0.2)).offset(y: configuration.isPressed ? 1 : 2))
+            .offset(y: faceOffset)
+            .background(Rectangle().fill(Palette.ink.opacity(prominent ? 0.35 : 0.2)).offset(y: Self.depth))
+            .opacity(isEnabled ? 1 : 0.45)
             .contentShape(Rectangle())
+            .onHover { hovering = $0 }
+            .animation(Motion.easeOut(0.12), value: hovering)
+            .animation(pressed ? nil : Motion.easeOut(0.12), value: pressed)
+    }
+}
+
+/// The inspector's scrolling body. A ScrollView left inside the toolbar's safe area is drawn below the
+/// toolbar while SwiftUI places its buttons for clicks as if the toolbar weren't there, so every button
+/// in the inspector responded about a toolbar's height above where it was drawn. Ignoring the top safe
+/// area keeps drawing and hit-testing in agreement; the inset is added back as padding.
+///
+/// While the inspector opens, its column grows from zero width. Laid out at each intermediate width, the
+/// cover scaled up from nothing and the text rewrapped every frame. So the content never lays out narrower
+/// than the column's minimum: it stays pinned to the column's leading edge and slides in with it, and the
+/// window clips whatever hasn't arrived yet.
+enum Inspector {
+    static let minWidth: CGFloat = 300
+    static let idealWidth: CGFloat = 340
+    static let maxWidth: CGFloat = 420
+}
+
+struct InspectorScroll<Content: View>: View {
+    @ViewBuilder var content: Content
+    var body: some View {
+        GeometryReader { g in
+            ScrollView {
+                content
+                    .padding(.horizontal, 20).padding(.top, g.safeAreaInsets.top + 8).padding(.bottom, 20)
+            }
+            .ignoresSafeArea(.container, edges: .top)
+            .frame(width: max(g.size.width, Inspector.minWidth))
+            .frame(width: g.size.width, alignment: .leading)
+            .clipped()
+        }
+        .background(Palette.paper)
     }
 }
 

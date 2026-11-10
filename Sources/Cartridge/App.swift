@@ -90,17 +90,17 @@ struct Sidebar: View {
         @Bindable var model = model
         List(selection: Binding(get: { model.section }, set: { if let v = $0 { model.section = v } })) {
             Section {
-                row("Device", glyph: navIcon("sdcard", .device)).tag(Pane.device)
-                row("Emulators", glyph: navIcon("cpu", .emulators)).tag(Pane.emulators)
+                row("Device", glyph: navIcon("sdcard", .device), pane: .device)
+                row("Emulators", glyph: navIcon("cpu", .emulators), pane: .emulators)
             }
             Section(isExpanded: $libraryOpen) {
-                row("All games", count: model.games.count, glyph: AnyView(Image(systemName: "square.grid.2x2"))).tag(Pane.library(.all))
-                row("Favorites", count: model.snapshot?.favorites.count ?? 0, glyph: AnyView(Image(systemName: "star"))).tag(Pane.library(.favorites))
+                row("All games", count: model.games.count, glyph: AnyView(Image(systemName: "square.grid.2x2")), pane: .library(.all))
+                row("Favorites", count: model.snapshot?.favorites.count ?? 0, glyph: AnyView(Image(systemName: "star")), pane: .library(.favorites))
             } header: { header("Library", isOpen: $libraryOpen) }
             Section(isExpanded: $systemsOpen) {
                 ForEach(model.systems(), id: \.info.folder) { s in
-                    row(s.info.name, count: s.count, glyph: AnyView(SystemIcon(folder: s.info.folder, size: 20)))
-                        .tag(Pane.library(.system(s.info.folder)))
+                    row(s.info.name, count: s.count, glyph: AnyView(SystemIcon(folder: s.info.folder, size: 20)),
+                        pane: .library(.system(s.info.folder)))
                         .dropDestination(for: URL.self) { urls, _ in
                             Task { await model.addGames(urls, to: s.info.folder) }
                             return true
@@ -114,13 +114,16 @@ struct Sidebar: View {
 
     /// Every sidebar row shares one geometry: icons left-aligned in a 22pt column, labels on one text column,
     /// counts on the trailing edge.
-    func row(_ title: String, count: Int? = nil, glyph: AnyView) -> some View {
-        HStack(spacing: 8) {
-            glyph.frame(width: 22, alignment: .leading)
-            Text(title)
-            Spacer()
-            if let count { Text("\(count)").font(Fonts.mono(11)).foregroundStyle(.secondary) }
+    func row(_ title: String, count: Int? = nil, glyph: AnyView, pane: Pane) -> some View {
+        SidebarRow(selected: model.section == pane) {
+            HStack(spacing: 8) {
+                glyph.frame(width: 22, alignment: .leading)
+                Text(title)
+                Spacer()
+                if let count { Text("\(count)").font(Fonts.mono(11)).foregroundStyle(.secondary) }
+            }
         }
+        .tag(pane)
     }
 
     /// Accent-tinted, except on the selected row where the system's selected style keeps it legible on the highlight.
@@ -138,6 +141,27 @@ struct Sidebar: View {
         .accessibilityLabel(title)
         .accessibilityValue(isOpen.wrappedValue ? "Expanded" : "Collapsed")
         .accessibilityHint("Shows or hides the section")
+    }
+}
+
+/// A soft wash behind the row under the pointer, sized to sit where the system selection highlight draws.
+/// No fade: the sidebar is scanned dozens of times a day, so the state follows the pointer instantly.
+struct SidebarRow<Content: View>: View {
+    var selected: Bool
+    @ViewBuilder var content: Content
+    @State private var hovering = false
+
+    var body: some View {
+        content
+            .contentShape(Rectangle())
+            .background {
+                if hovering && !selected {
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .fill(Palette.ink.opacity(0.07))
+                        .padding(.horizontal, -8).padding(.vertical, -4)
+                }
+            }
+            .onHover { hovering = $0 }
     }
 }
 

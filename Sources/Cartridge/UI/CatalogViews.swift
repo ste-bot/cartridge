@@ -94,7 +94,7 @@ struct CatalogDetail: View {
     var body: some View {
         let game = model.owned[entry.id]
         let folder = model.folder(for: entry, scope: scope)
-        ScrollView {
+        InspectorScroll {
             VStack(alignment: .leading, spacing: 18) {
                 CoverView(entry: entry)
                     .frame(maxWidth: .infinity).frame(height: 260)
@@ -151,10 +151,8 @@ struct CatalogDetail: View {
                     if let w = entry.wikipedia, let u = URL(string: w) { Link("Wikipedia", destination: u) }
                     if let v = entry.video, let u = URL(string: v) { Link("Video", destination: u) }
                 }
-                .font(Fonts.body(12))
+                .font(Fonts.body(12)).buttonStyle(PixelLinkStyle())
             }
-            .padding(.horizontal, 20).padding(.top, -16).padding(.bottom, 20)
         }
-        .background(Palette.paper)
     }
 }
