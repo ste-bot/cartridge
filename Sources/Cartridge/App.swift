@@ -15,6 +15,7 @@ struct CartridgeApp: App {
             RootView()
                 .environment(model)
                 .frame(minWidth: 980, minHeight: 620)
+                .background(TransparentTitlebar())
                 .onAppear {
                     NSApplication.shared.activate(ignoringOtherApps: true)
                     // `-fullscreen YES` opens straight into full screen (used for screenshots).
@@ -82,6 +83,8 @@ struct RootView: View {
 
 struct Sidebar: View {
     @Environment(AppModel.self) private var model
+    @AppStorage("sidebar.libraryOpen") private var libraryOpen = true
+    @AppStorage("sidebar.systemsOpen") private var systemsOpen = true
 
     var body: some View {
         @Bindable var model = model
@@ -90,11 +93,11 @@ struct Sidebar: View {
                 row("Device", glyph: navIcon("sdcard", .device)).tag(Pane.device)
                 row("Emulators", glyph: navIcon("cpu", .emulators)).tag(Pane.emulators)
             }
-            Section {
+            Section(isExpanded: $libraryOpen) {
                 row("All games", count: model.games.count, glyph: AnyView(Image(systemName: "square.grid.2x2"))).tag(Pane.library(.all))
                 row("Favorites", count: model.snapshot?.favorites.count ?? 0, glyph: AnyView(Image(systemName: "star"))).tag(Pane.library(.favorites))
-            } header: { header("Library") }
-            Section {
+            } header: { header("Library", isOpen: $libraryOpen) }
+            Section(isExpanded: $systemsOpen) {
                 ForEach(model.systems(), id: \.info.folder) { s in
                     row(s.info.name, count: s.count, glyph: AnyView(SystemIcon(folder: s.info.folder, size: 20)))
                         .tag(Pane.library(.system(s.info.folder)))
@@ -103,7 +106,7 @@ struct Sidebar: View {
                             return true
                         }
                 }
-            } header: { header("Systems") }
+            } header: { header("Systems", isOpen: $systemsOpen) }
         }
         .font(Fonts.body(13))
         .safeAreaInset(edge: .bottom) { CardBadge() }
@@ -126,7 +129,16 @@ struct Sidebar: View {
     }
 
     /// Section headers start on the icons' left edge (the system inset is 2pt shy of the row content).
-    func header(_ title: String) -> some View { Text(title).padding(.leading, 2) }
+    /// The whole title is a click target for collapsing its section, not just the hover chevron.
+    func header(_ title: String, isOpen: Binding<Bool>) -> some View {
+        Button { withAnimation(Motion.reflow) { isOpen.wrappedValue.toggle() } } label: {
+            Text(title).padding(.leading, 2).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .accessibilityValue(isOpen.wrappedValue ? "Expanded" : "Collapsed")
+        .accessibilityHint("Shows or hides the section")
+    }
 }
 
 struct CardBadge: View {
@@ -210,5 +222,19 @@ struct StatusOverlay: View {
         .padding(.bottom, 18)
         .animation(Motion.reflow, value: model.activity != nil)
         .animation(Motion.reflow, value: model.notice)
+    }
+}
+
+
+/// The title bar's grey band started 2pt left of the split divider, notching the sidebar's top corner.
+/// A transparent title bar removes the band, so the divider runs unbroken to the top of the window.
+struct TransparentTitlebar: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        let v = NSView()
+        DispatchQueue.main.async { v.window?.titlebarAppearsTransparent = true }
+        return v
+    }
+    func updateNSView(_ nsView: NSView, context: Context) {
+        nsView.window?.titlebarAppearsTransparent = true
     }
 }
