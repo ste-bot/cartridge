@@ -12,6 +12,7 @@ struct DeviceView: View {
                         osPanel(s)
                         careP(s)
                     }
+                    .fixedSize(horizontal: false, vertical: true)
                     themes(s)
                 }
                 .padding(28)

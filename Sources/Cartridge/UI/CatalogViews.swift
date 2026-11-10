@@ -153,7 +153,7 @@ struct CatalogDetail: View {
                 }
                 .font(Fonts.body(12))
             }
-            .padding(20)
+            .padding(.horizontal, 20).padding(.top, -16).padding(.bottom, 20)
         }
         .background(Palette.paper)
     }

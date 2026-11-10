@@ -225,7 +225,7 @@ struct Panel<Content: View>: View {
     var body: some View {
         content
             .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(Palette.panel)
             .overlay(Rectangle().strokeBorder(Palette.rule, lineWidth: 1))
     }

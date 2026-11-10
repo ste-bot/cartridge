@@ -75,14 +75,14 @@ struct Sidebar: View {
         @Bindable var model = model
         List(selection: Binding(get: { model.section }, set: { if let v = $0 { model.section = v } })) {
             Section {
-                Label { Text("Device") } icon: { Image(systemName: "sdcard") }.tag(Pane.device)
-                Label { Text("Emulators") } icon: { Image(systemName: "cpu") }.tag(Pane.emulators)
+                row("Device", glyph: navIcon("sdcard", .device)).tag(Pane.device)
+                row("Emulators", glyph: navIcon("cpu", .emulators)).tag(Pane.emulators)
             }
-            Section("Library") {
+            Section {
                 row("All games", count: model.games.count, glyph: AnyView(Image(systemName: "square.grid.2x2"))).tag(Pane.library(.all))
                 row("Favorites", count: model.snapshot?.favorites.count ?? 0, glyph: AnyView(Image(systemName: "star"))).tag(Pane.library(.favorites))
-            }
-            Section("Systems") {
+            } header: { header("Library") }
+            Section {
                 ForEach(model.systems(), id: \.info.folder) { s in
                     row(s.info.name, count: s.count, glyph: AnyView(SystemIcon(folder: s.info.folder, size: 20)))
                         .tag(Pane.library(.system(s.info.folder)))
@@ -91,20 +91,30 @@ struct Sidebar: View {
                             return true
                         }
                 }
-            }
+            } header: { header("Systems") }
         }
         .font(Fonts.body(13))
         .safeAreaInset(edge: .bottom) { CardBadge() }
     }
 
-    func row(_ title: String, count: Int, glyph: AnyView) -> some View {
+    /// Every sidebar row shares one geometry: icons left-aligned in a 22pt column, labels on one text column,
+    /// counts on the trailing edge.
+    func row(_ title: String, count: Int? = nil, glyph: AnyView) -> some View {
         HStack(spacing: 8) {
-            glyph.frame(width: 22)
+            glyph.frame(width: 22, alignment: .leading)
             Text(title)
             Spacer()
-            Text("\(count)").font(Fonts.mono(11)).foregroundStyle(.secondary)
+            if let count { Text("\(count)").font(Fonts.mono(11)).foregroundStyle(.secondary) }
         }
     }
+
+    /// Accent-tinted, except on the selected row where the system's selected style keeps it legible on the highlight.
+    func navIcon(_ symbol: String, _ pane: Pane) -> AnyView {
+        model.section == pane ? AnyView(Image(systemName: symbol)) : AnyView(Image(systemName: symbol).foregroundStyle(Palette.button))
+    }
+
+    /// Section headers start on the icons' left edge (the system inset is 2pt shy of the row content).
+    func header(_ title: String) -> some View { Text(title).padding(.leading, 2) }
 }
 
 struct CardBadge: View {
@@ -122,7 +132,7 @@ struct CardBadge: View {
                 SegmentMeter(value: Double(s.usedBytes) / Double(max(1, s.totalBytes)), segments: 12, height: 6)
                 Text("\(s.freeBytes.bytes) free of \(s.totalBytes.bytes)").font(Fonts.mono(10)).foregroundStyle(Palette.mute)
             }
-            .padding(12)
+            .padding(.horizontal, 16).padding(.vertical, 12)
             .background(Palette.panel)
             .overlay(Rectangle().frame(height: 1).foregroundStyle(Palette.rule), alignment: .top)
         }

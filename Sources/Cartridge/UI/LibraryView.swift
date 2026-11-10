@@ -111,7 +111,11 @@ struct LibraryView: View {
         return HStack(alignment: .center, spacing: 14) {
             if case .system(let f) = scope { SystemIcon(folder: f, size: 44) }
             VStack(alignment: .leading, spacing: 6) {
-                Text(title).font(Fonts.pixel(32)).lineLimit(1).minimumScaleFactor(0.6)
+                HStack(alignment: .center, spacing: 12) {
+                    Text(title).font(Fonts.pixel(32)).lineLimit(1).minimumScaleFactor(0.6)
+                    Spacer(minLength: 12)
+                    if catalogAvailable { ModeSwitch(mode: $model.libraryMode) }
+                }
                 if inCatalog {
                     let c = model.catalogCoverage(scope)
                     HStack(spacing: 10) {
@@ -122,17 +126,6 @@ struct LibraryView: View {
                 } else {
                     Text("\(count.formatted()) games · \(bytes.bytes)").font(Fonts.mono(12)).foregroundStyle(Palette.mute)
                 }
-            }
-            Spacer(minLength: 12)
-            if catalogAvailable {
-                Picker("Show", selection: $model.libraryMode) {
-                    Text("On card").tag(LibraryMode.mine)
-                    Text("Full catalog").tag(LibraryMode.catalog)
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .fixedSize()
-                .help("Switch between the games on your card and every game released for this system")
             }
         }
     }
@@ -391,7 +384,7 @@ struct GameDetail: View {
                 Button("Delete from card…") { confirmDelete = true }
                     .buttonStyle(.borderless).foregroundStyle(Palette.warn).font(Fonts.body(12))
             }
-            .padding(20)
+            .padding(.horizontal, 20).padding(.top, -16).padding(.bottom, 20)
         }
         .background(Palette.paper)
         .confirmationDialog("Delete \(game.title)?", isPresented: $confirmDelete) {
@@ -399,5 +392,35 @@ struct GameDetail: View {
         } message: {
             Text("This removes the game and its box art from the card. Saves stay. It can't be undone unless you have a backup.")
         }
+    }
+}
+
+/// On card / Full catalog: two joined square segments in the filter chips' geometry, so every control
+/// in the header band is rectangular.
+struct ModeSwitch: View {
+    @Binding var mode: LibraryMode
+
+    var body: some View {
+        HStack(spacing: 0) {
+            segment("On card", .mine)
+            Rectangle().fill(Palette.ink).frame(width: 1)
+            segment("Full catalog", .catalog)
+        }
+        .fixedSize()
+        .overlay(Rectangle().strokeBorder(Palette.ink, lineWidth: 1))
+        .help("Switch between the games on your card and every game released for this system")
+    }
+
+    func segment(_ title: String, _ value: LibraryMode) -> some View {
+        let on = mode == value
+        return Button { mode = value } label: {
+            Text(title).font(Fonts.medium(12)).lineLimit(1)
+                .padding(.horizontal, 12).padding(.vertical, 5)
+                .foregroundStyle(on ? Palette.paper : Palette.ink)
+                .background(on ? Palette.ink : Color.clear)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(on ? .isSelected : [])
     }
 }
