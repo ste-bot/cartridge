@@ -23,6 +23,16 @@ struct LibraryView: View {
 
     var inCatalog: Bool { catalogAvailable && model.libraryMode == .catalog }
 
+    /// The selection, resolved. A stale or unknown id leaves the inspector closed instead of empty.
+    var pickedEntry: GameMeta? {
+        guard inCatalog, let id = model.selectedCatalog else { return nil }
+        return model.catalogEntries(scope).first { $0.id == id }
+    }
+    var pickedGame: Game? {
+        guard !inCatalog, let id = model.selectedGame else { return nil }
+        return model.games.first { $0.id == id }
+    }
+
     static let columns = [GridItem(.adaptive(minimum: 150, maximum: 190), spacing: 18, alignment: .top)]
 
     var body: some View {
@@ -78,14 +88,12 @@ struct LibraryView: View {
                     .disabled(model.activity != nil)
             }
         }
-        .inspector(isPresented: Binding(get: { inCatalog ? model.selectedCatalog != nil : model.selectedGame != nil },
+        .inspector(isPresented: Binding(get: { pickedEntry != nil || pickedGame != nil },
                                         set: { if !$0 { model.selectedGame = nil; model.selectedCatalog = nil } })) {
             Group {
-                if inCatalog {
-                    if let id = model.selectedCatalog, let e = model.catalogEntries(scope).first(where: { $0.id == id }) {
-                        CatalogDetail(entry: e, scope: scope)
-                    }
-                } else if let id = model.selectedGame, let g = model.games.first(where: { $0.id == id }) {
+                if let e = pickedEntry {
+                    CatalogDetail(entry: e, scope: scope)
+                } else if let g = pickedGame {
                     GameDetail(game: g)
                 }
             }
@@ -292,7 +300,7 @@ struct GameTile: View {
                     }
                 }
                 .overlay(Rectangle().strokeBorder(selected ? Palette.ink : Palette.rule, lineWidth: selected ? 2 : 1))
-            Text(game.title).font(Fonts.medium(12)).foregroundStyle(Palette.ink).lineLimit(2)
+            Text(game.title).font(Fonts.medium(12)).foregroundStyle(Palette.ink).lineLimit(2, reservesSpace: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
             HStack(spacing: 6) {
                 Text(meta?.year.map(String.init) ?? info.name).font(Fonts.mono(10)).foregroundStyle(Palette.mute).lineLimit(1)

@@ -126,7 +126,7 @@ struct RatingView: View {
             HStack(spacing: 8) {
                 SegmentMeter(value: r / 5, segments: 5, color: Palette.ink, height: compact ? 6 : 10)
                     .frame(width: compact ? 44 : 90)
-                Text(String(format: "%.1f", r)).font(Fonts.pixel(compact ? 12 : 18)).foregroundStyle(Palette.ink)
+                Text(String(format: "%.1f", r)).font(Fonts.pixel(compact ? 12 : 18)).foregroundStyle(Palette.ink).fixedSize()
                 if !compact { Text("\(n.formatted()) ratings").font(Fonts.mono(11)).foregroundStyle(Palette.mute) }
             }
             .accessibilityElement(children: .ignore)

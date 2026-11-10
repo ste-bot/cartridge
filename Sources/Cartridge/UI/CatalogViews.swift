@@ -66,7 +66,7 @@ struct CatalogTile: View {
                 }
                 .overlay(Rectangle().strokeBorder(selected ? Palette.ink : (onCard ? Palette.ink.opacity(0.6) : Palette.rule),
                                                   lineWidth: selected ? 2 : 1))
-            Text(entry.name).font(Fonts.medium(12)).foregroundStyle(Palette.ink).lineLimit(2)
+            Text(entry.name).font(Fonts.medium(12)).foregroundStyle(Palette.ink).lineLimit(2, reservesSpace: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
             HStack(spacing: 6) {
                 Text(caption).font(Fonts.mono(10)).foregroundStyle(Palette.mute).lineLimit(1)

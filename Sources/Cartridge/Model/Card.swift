@@ -84,6 +84,8 @@ enum CardReader {
     /// Mounted volumes that look like an Onion card.
     static func findCards() -> [URL] {
         let fm = FileManager.default
+        // `-cardRoot <folder>` reads a folder (e.g. a backup) as the card, for screenshots and testing.
+        if let mock = UserDefaults.standard.string(forKey: "cardRoot") { return [URL(fileURLWithPath: mock)] }
         let vols = (try? fm.contentsOfDirectory(at: URL(fileURLWithPath: "/Volumes"), includingPropertiesForKeys: nil)) ?? []
         return vols.filter {
             fm.fileExists(atPath: $0.appendingPathComponent("Roms").path) &&

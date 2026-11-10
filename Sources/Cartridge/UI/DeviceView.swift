@@ -16,6 +16,7 @@ struct DeviceView: View {
                 }
                 .padding(28)
                 .frame(maxWidth: 1100, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }

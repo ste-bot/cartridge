@@ -15,7 +15,15 @@ struct CartridgeApp: App {
             RootView()
                 .environment(model)
                 .frame(minWidth: 980, minHeight: 620)
-                .onAppear { NSApplication.shared.activate(ignoringOtherApps: true) }
+                .onAppear {
+                    NSApplication.shared.activate(ignoringOtherApps: true)
+                    // `-fullscreen YES` opens straight into full screen (used for screenshots).
+                    if UserDefaults.standard.bool(forKey: "fullscreen") {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            NSApplication.shared.windows.first { $0.isVisible }?.toggleFullScreen(nil)
+                        }
+                    }
+                }
         }
         .windowToolbarStyle(.unified(showsTitle: false))
         .commands {
@@ -94,7 +102,7 @@ struct Sidebar: View {
             glyph.frame(width: 22)
             Text(title)
             Spacer()
-            Text("\(count)").font(Fonts.mono(11)).foregroundStyle(Palette.mute)
+            Text("\(count)").font(Fonts.mono(11)).foregroundStyle(.secondary)
         }
     }
 }
