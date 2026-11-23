@@ -30,6 +30,8 @@ struct CartridgeApp: App {
         .commands {
             CommandGroup(after: .newItem) {
                 Button("Refresh Card") { Task { await model.refresh() } }.keyboardShortcut("r")
+                Button("Patch ROM…") { model.openPatcher() }.keyboardShortcut("p", modifiers: [.command, .shift])
+                    .disabled(model.snapshot == nil)
             }
         }
     }
@@ -45,6 +47,7 @@ struct RootView: View {
         @Bindable var model = model
         NavigationSplitView(columnVisibility: $columns) {
             Sidebar()
+                .sheet(item: $model.patchRequest) { PatchSheet(request: $0).environment(model) }
                 .navigationSplitViewColumnWidth(min: 210, ideal: 230, max: 280)
                 // The system toggle's hover fades in slowly; ours reacts as fast as the sidebar rows.
                 .toolbar(removing: .sidebarToggle)

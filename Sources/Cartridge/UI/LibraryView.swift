@@ -84,6 +84,12 @@ struct LibraryView: View {
         .searchable(text: $model.search, placement: .toolbar, prompt: "Search games")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
+                Button { model.openPatcher() } label: { Label("Patch ROM", systemImage: "bandage") }
+                    .labelStyle(.titleAndIcon)
+                    .help("Patch a ROM hack from a GitHub link or a .bps, .ups or .ips file")
+                    .disabled(model.activity != nil)
+            }
+            ToolbarItem(placement: .primaryAction) {
                 Button { model.chooseGamesToAdd(scope: scope) } label: { Label("Add games", systemImage: "plus") }
                     .labelStyle(.titleAndIcon)
                     .help(addHelp)
@@ -390,6 +396,9 @@ struct GameDetail: View {
                          : "No match in the LaunchBox database. Fan hacks and renamed files often won't match.")
                         .font(Fonts.body(12)).foregroundStyle(Palette.mute)
                 }
+                if let src = model.patchSource(for: game) {
+                    PatchedFrom(game: game, source: src)
+                }
                 Divider().overlay(Palette.rule)
                 VStack(alignment: .leading, spacing: 6) {
                     LabeledRow(label: "Size", value: game.size.bytes)
@@ -435,5 +444,33 @@ struct ModeSwitch: View {
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(on ? .isSelected : [])
+    }
+}
+
+/// Where a patched game came from, with a way to pull its newest release onto the card.
+struct PatchedFrom: View {
+    @Environment(AppModel.self) private var model
+    var game: Game
+    var source: PatchSource
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Eyebrow(text: "Patched")
+            if let repo = source.repo {
+                HStack {
+                    Text("From").font(Fonts.body(12)).foregroundStyle(Palette.mute)
+                    Spacer()
+                    Link(repo, destination: URL(string: "https://github.com/\(repo)")!)
+                        .font(Fonts.mono(12)).buttonStyle(PixelLinkStyle(color: Palette.ink))
+                }
+            }
+            if let tag = source.tag { LabeledRow(label: "Version", value: tag) }
+            LabeledRow(label: "Patched", value: source.patched.formatted(date: .abbreviated, time: .omitted))
+            Button(source.repo == nil ? "Update from a patch…" : "Check for update") {
+                model.openPatcher(link: source.repo.map { "github.com/\($0)" } ?? "", updating: game)
+            }
+            .buttonStyle(PixelButtonStyle(size: .fill))
+            .disabled(model.activity != nil)
+        }
     }
 }

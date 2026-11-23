@@ -30,6 +30,17 @@ Switch any system (or All games) from **On card** to **Full catalog** to see eve
 
 ![Full catalog: Game Boy Advance games not on the card, ranked by rating](docs/catalog.png)
 
+### Patch ROM hacks
+Click **Patch ROM** in the Library toolbar (or press ⇧⌘P), then paste a GitHub link to a ROM hack, or drop a `.bps`, `.ups` or `.ips` file onto the window.
+
+- **Any GitHub link works:** the repo, a release, a tag, or a direct link to the patch file. Cartridge takes the newest release, downloads the patch and unpacks it if it's inside a `.zip`.
+- **It finds your base ROM for you.** BPS and UPS patches name the exact clean ROM they were made for. Cartridge looks for it on the card, in folders you've picked a base from before, and in Downloads. IPS patches don't name their base, so you choose it.
+- **Every checksum is checked** before anything is written. A wrong base or a damaged patch is refused.
+- **It names the game without the version** (`Pokemon HnS Legends.gba`). It also offers the first image in the release notes as box art.
+- **Updating is one click.** A patched game's details show where it came from and a **Check for update** button. The update replaces the ROM under the same name, so its save, which Onion keys by file name, carries over. It stays in Favorites too.
+
+Cartridge downloads patches, never games: you supply the clean ROM.
+
 ### Device
 - Free space at a glance, plus your Onion and RetroArch versions.
 - The latest Onion release from GitHub. **Copy update to card** puts it on the card; the Miyoo installs it the next time it starts.
@@ -81,8 +92,9 @@ The build is signed ad hoc for your own Mac. If you share the `.app` with someon
 | Ratings, genres, descriptions | LaunchBox public `Metadata.zip` | `~/Library/Application Support/Cartridge/` (an index of about 42k retro games) |
 | Covers | `images.launchbox-app.com`, fetched when shown | `~/Library/Caches/Cartridge/covers`, or the card's `Imgs/` folders when you save them |
 | Onion releases | GitHub API | Not stored |
+| ROM hack patches | The GitHub release you link to | A temporary folder while patching; where each patched game came from is kept in `~/Library/Application Support/Cartridge/patched.json` |
 
-Nothing about your library is uploaded anywhere. Cartridge doesn't include or download any games.
+Nothing about your library is uploaded anywhere. Cartridge doesn't include or download any games. It patches ROMs you already have.
 
 ## How it reads the card
 
@@ -108,10 +120,12 @@ These launch arguments open a specific screen, which is handy for screenshots:
 ```bash
 open dist/Cartridge.app --args -pane device        # or emulators, favorites, system:GBA
 open dist/Cartridge.app --args -select "GBA/Game.gba" -nocover YES
+open dist/Cartridge.app --args -patch "github.com/owner/hack"   # opens the patcher on launch
+open dist/Cartridge.app --args -cardRoot ~/some/folder          # reads a folder as the card
 ```
 
 The code lives in `Sources/Cartridge`:
-- `Model/`: reading and writing the card (`Card.swift`), the LaunchBox index and title matching (`Ratings.swift`), Onion updates and backup (`Services.swift`), and app state (`AppModel.swift`)
+- `Model/`: reading and writing the card (`Card.swift`), the LaunchBox index and title matching (`Ratings.swift`), Onion updates and backup (`Services.swift`), ROM patching and GitHub releases (`Patcher.swift`, `Patching.swift`), and app state (`AppModel.swift`)
 - `UI/`: the design system (`Theme.swift`) and one file per screen
 
 ## Design

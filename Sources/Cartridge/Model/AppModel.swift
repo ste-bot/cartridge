@@ -43,6 +43,11 @@ final class AppModel {
     struct Ejected: Equatable { var name: String; var used: Double }
     var ejected: Ejected?
 
+    /// Open while the Patch ROM sheet is showing.
+    var patchRequest: PatchRequest?
+    /// Where each patched game came from (keyed by relPath), so it can be updated later.
+    var patchSources: [String: PatchSource] = PatchStore.load()
+
     var ratings: RatingsIndex?
     var ratingsStatus = "Not installed"
     var releases: [OnionRelease] = []
@@ -75,7 +80,11 @@ final class AppModel {
         default: break
         }
         Task { await loadRatings() }
-        Task { await refresh() }
+        Task {
+            await refresh()
+            // `-patch <github link>` opens the patcher on launch (for screenshots and testing).
+            if let l = d.string(forKey: "patch") { openPatcher(link: l) }
+        }
         Task { await loadReleases() }
         let nc = NSWorkspace.shared.notificationCenter
         for n in [NSWorkspace.didMountNotification, NSWorkspace.didUnmountNotification] {
@@ -220,6 +229,12 @@ final class AppModel {
 
     func addGames(_ urls: [URL], to forcedSystem: String? = nil) async {
         guard let s = snapshot else { return }
+        if let p = urls.first(where: isPatchDrop) {
+            p.isFileURL ? openPatcher(file: p) : openPatcher(link: p.absoluteString)
+            let rest = urls.filter { !isPatchDrop($0) }
+            if !rest.isEmpty { await addGames(rest, to: forcedSystem) }
+            return
+        }
         var added = 0, skipped: [String] = []
         activity = Activity(title: "Adding games", detail: "")
         for u in urls {
